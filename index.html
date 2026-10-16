@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GreenSite | خريطة أولويات التشجير في بغداد</title>
+<meta name="description" content="GreenSite: خريطة تفاعلية تساعد حملات التشجير ببغداد تختار وين تبدي، مبنية على بيانات أقمار صناعية حقيقية لـ 6,011 خلية.">
+<meta property="og:title" content="GreenSite | خريطة أولويات التشجير في بغداد">
+<meta property="og:description" content="قبل ما ينزل المتطوع، يشوف وين الحاجة أكثر. بيانات أقمار صناعية حقيقية لـ 6,011 خلية ببغداد.">
+<meta name="theme-color" content="#161D08">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500&family=Readex+Pro:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a href="#top" class="brand" aria-label="GreenSite">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 21c-5-3-8-7-8-11a8 8 0 0 1 16 0c0 4-3 8-8 11Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 17V9m0 3 3-3m-3 5-3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span lang="en">GreenSite</span>
+    </a>
+    <nav class="links" aria-label="أقسام الصفحة">
+      <a href="#problem">المشكلة</a>
+      <a href="#how">شلون يشتغل</a>
+      <a href="#map">الخريطة</a>
+      <a href="#limits">حدود النتائج</a>
+      <a href="#team">الفريق</a>
+    </nav>
+    <a href="#map" class="btn btn-sm">افتح الخريطة</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap hero-in">
+      <p class="eyebrow"><span lang="en">Team SiTouch · Green Code Hackathon</span></p>
+      <h1>وين نزرع ببغداد؟<br><span class="hl">الخريطة تجاوب</span> قبل ما ينزل المتطوع</h1>
+      <p class="lead">حملات التشجير اليوم تختار أماكنها بالتخمين. GreenSite يقرأ بيانات الأقمار الصناعية لكل كيلومتر ببغداد، ويرتب المناطق حسب الحاجة والتربة، حتى يبدي الجهد بالمكان الصح.</p>
+      <div class="hero-cta">
+        <a href="#map" class="btn">افتح الخريطة</a>
+        <a href="#how" class="btn btn-ghost">شلون يشتغل؟</a>
+      </div>
+      <dl class="stats">
+        <div><dt>خلية مدروسة</dt><dd id="st-cells">6,011</dd></div>
+        <div><dt>شهر من البيانات</dt><dd>41</dd></div>
+        <div><dt>خلية أولوية عالية</dt><dd id="st-high">504</dd></div>
+        <div><dt>آخر بيانات</dt><dd>مايو 2026</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section id="problem" class="section">
+    <div class="wrap">
+      <p class="kicker">المشكلة</p>
+      <h2>الخضرة ببغداد تتراجع، والتشجير يصير بالتخمين</h2>
+      <div class="cards3">
+        <article class="card">
+          <h3>دورة طبيعية كل سنة</h3>
+          <p>الخضرة تكون بذروتها بين فبراير وأبريل بعد أمطار الشتاء (NDVI حوالي 0.31)، وتنزل بين يونيو وأكتوبر (حوالي 0.21) مع حرارة شهرية بين 37 و39 درجة.</p>
+        </article>
+        <article class="card">
+          <h3>التوسع العمراني خفّض الأساس</h3>
+          <p>الدورة الموسمية طبيعية، بس التوسع العمراني خفّض مستوى الخضرة الأساسي. وقلة المساحات الخضراء ترفع الحرارة.</p>
+        </article>
+        <article class="card">
+          <h3>الجهد يضيع</h3>
+          <p>الحملات تختار أرض مبنية أو تربة ضعيفة لأنها ما تشوف الصورة الكاملة، فيروح التعب والشتلات بلا نتيجة.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="section section-alt">
+    <div class="wrap">
+      <p class="kicker">شلون يشتغل</p>
+      <h2>من بيانات الأقمار الصناعية لخريطة أولويات</h2>
+      <ol class="steps">
+        <li><span class="n">1</span><h3>بيانات حقيقية</h3><p>NDVI من القمر الصناعي MODIS، ومناخ وتربة ونوع الأرض، لكل خلية 1 كم ولكل شهر من 2023 لحد مايو 2026.</p></li>
+        <li><span class="n">2</span><h3>فحص جودة وتنظيف</h3><p>نستبعد الأشهر اللي قراءتها غير موثوقة (غيوم مثلاً) بدون ما نحذف أي صف من البيانات الأصلية.</p></li>
+        <li><span class="n">3</span><h3>3 ميزات من NDVI</h3><p>متوسط الخضرة بآخر 12 شهر، والتغير عن الـ 12 شهر السابقة، والفرق عن المستوى المعتاد لنفس الأشهر.</p></li>
+        <li><span class="n">4</span><h3>K-Means</h3><p>يجمع الخلايا المتشابهة بسلوك الخضرة بـ 3 مجموعات، للاستكشاف بس، وما يدخل بالترتيب.</p></li>
+        <li><span class="n">5</span><h3>قواعد الحاجة والتربة</h3><p>قواعد واضحة تحدد وين ممكن التدخل مطلوب، ووين التربة واعدة أكثر.</p></li>
+        <li><span class="n">6</span><h3>أولويات</h3><p>الترتيب يبدي بالحاجة، والتربة تفصل بين المتساويين، ونستبعد الأراضي المبنية والمي.</p></li>
+        <li><span class="n">7</span><h3>خريطة تفاعلية</h3><p>أفضل 20 منطقة متباعدة، وتكدر تختار البعد عن المركز، وكل خلية بتفاصيلها.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="map" class="section map-section">
+    <div class="wrap">
+      <p class="kicker">الخريطة</p>
+      <h2>خريطة الأولويات</h2>
+      <p class="sub">كل مربع خلية حقيقية بحجم تقريباً 0.93 كم. النجوم هي أفضل 20 منطقة، وبين كل وحدة والثانية 5 كم على الأقل. اضغط على أي مربع أو نجمة حتى تشوف تفاصيله.</p>
+    </div>
+
+    <div class="map-shell">
+      <div class="controls" role="group" aria-label="أدوات الخريطة">
+        <div class="ctl">
+          <span class="ctl-l" id="mode-l">لوّن الخلايا حسب</span>
+          <div class="seg" role="radiogroup" aria-labelledby="mode-l">
+            <button type="button" role="radio" aria-checked="true" data-mode="priority">الأولوية</button>
+            <button type="button" role="radio" aria-checked="false" data-mode="cluster">K-Means</button>
+            <button type="button" role="radio" aria-checked="false" data-mode="soil">التربة</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="ctl-l" id="base-l">الخلفية</span>
+          <div class="seg" role="radiogroup" aria-labelledby="base-l">
+            <button type="button" role="radio" aria-checked="true" data-base="sat">قمر صناعي</button>
+            <button type="button" role="radio" aria-checked="false" data-base="street">شوارع</button>
+          </div>
+        </div>
+        <div class="ctl ctl-range">
+          <label class="ctl-l" for="dist">أقل بعد عن المركز <output id="dist-out" for="dist">0 كم</output></label>
+          <input type="range" id="dist" min="0" max="55" step="1" value="0">
+        </div>
+        <div class="ctl ctl-checks">
+          <label><input type="checkbox" id="show-stars" checked> أفضل 20 منطقة</label>
+          <label><input type="checkbox" id="show-top100"> أفضل 100 خلية</label>
+          <label><input type="checkbox" id="show-excluded" checked> المستبعدة</label>
+        </div>
+      </div>
+
+      <div class="map-grid">
+        <div class="map-wrap">
+          <div id="leaflet" dir="ltr" aria-label="خريطة بغداد التفاعلية"></div>
+          <div class="legend" id="legend" aria-live="polite"></div>
+          <div class="map-loading" id="map-loading">نحمّل الخلايا…</div>
+        </div>
+
+        <aside class="panel" id="panel" aria-live="polite">
+          <div id="inspector" class="inspector">
+            <h3>تفاصيل الخلية</h3>
+            <p class="muted">اضغط على أي مربع بالخريطة، أو على منطقة من القائمة تحت.</p>
+          </div>
+          <div class="shortlist">
+            <div class="sl-head">
+              <h3>أفضل 20 منطقة</h3>
+              <span class="pill" id="sl-meta">من 0 كم</span>
+            </div>
+            <ol id="sl-list"></ol>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section id="limits" class="section section-alt">
+    <div class="wrap">
+      <p class="kicker">حدود النتائج</p>
+      <h2>شنو الخريطة تكول، وشنو ما تكول</h2>
+      <div class="two">
+        <div class="card">
+          <h3 class="ok">تكول</h3>
+          <ul class="ticks">
+            <li>أي المناطق تستاهل نفحصها أول.</li>
+            <li>وين الخضرة نزلت أو أقل من مستواها المعتاد.</li>
+            <li>وين التربة واعدة أكثر مقارنة ببقية بغداد.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 class="no">ما تكول</h3>
+          <ul class="ticks no">
+            <li>"ازرع هنا" بشكل مضمون. ماكو بيانات عن زراعات نجحت أو فشلت حتى نتحقق منها.</li>
+            <li>تفاصيل أصغر من 1 كم. نوع الأرض قيمة وحدة بمركز الخلية.</li>
+            <li>ملكية الأرض أو وصول المي. هذني لازم تنفحص بالموقع.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="note">K-Means أداة استكشاف بس، وما تدخل بالترتيب. والحدود الرقمية بالقواعد افتراضات أولية، مو معايير بيئية رسمية.</p>
+    </div>
+  </section>
+
+  <section id="team" class="section">
+    <div class="wrap team">
+      <div>
+        <p class="kicker">الفريق</p>
+        <h2 lang="en" dir="ltr" class="ltr-h">Team SiTouch</h2>
+        <p class="sub">مشروع مشارك بهاكاثون Green Code. الموقع وسيلة، والبطل الحقيقي هو المتطوع.</p>
+      </div>
+      <div class="team-grid" id="team-grid">
+        <!-- TEAM: add one .member block per person -->
+        <div class="member placeholder"><span class="av">؟</span><div><b>اسم العضو</b><span>الدور</span></div></div>
+        <div class="member placeholder"><span class="av">؟</span><div><b>اسم العضو</b><span>الدور</span></div></div>
+        <div class="member placeholder"><span class="av">؟</span><div><b>اسم العضو</b><span>الدور</span></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span lang="en">GreenSite · Team SiTouch · Green Code Hackathon</span>
+    <span class="muted">البيانات: MODIS NDVI، ESA WorldCover، ومصادر المناخ والتربة. صور القمر الصناعي من Esri، والشوارع من OpenStreetMap.</span>
+  </div>
+</footer>
+
+<script src="assets/vendor/leaflet/leaflet.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
