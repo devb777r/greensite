@@ -49,7 +49,7 @@
     if (REDUCED) { fn(1); if (done) done(); return; }
     var t0 = performance.now();
     (function tick(now) {
-      var t = Math.min(1, (now - t0) / ms);
+      var t = Math.max(0, Math.min(1, (now - t0) / ms));
       fn(t);
       if (t < 1) requestAnimationFrame(tick); else if (done) done();
     })(t0);
@@ -82,7 +82,7 @@
       container: 'map',
       style: {
         version: 8,
-        projection: { type: 'globe' },
+        projection: { type: ['interpolate', ['linear'], ['zoom'], 2.6, 'vertical-perspective', 4.2, 'mercator'] },
         sky: { 'sky-color': '#0A120D', 'horizon-color': '#1d3324', 'fog-color': '#0A120D', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.6, 'fog-ground-blend': 0.6, 'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 6, 0.6, 9, 0] },
         sources: {
           sat: { type: 'raster', tileSize: 256, maxzoom: 18,
@@ -95,15 +95,17 @@
         ]
       },
       center: [38, 24], zoom: MOBILE() ? 0.9 : 1.5, pitch: 0, bearing: 0,
-      maxPitch: 70, attributionControl: { compact: true }, dragRotate: true
+      maxPitch: 65, maxZoom: 14, minZoom: 0.6, attributionControl: { compact: true }, dragRotate: true
     });
 
+    map.on('movestart', function () { document.body.classList.add('is-moving'); });
+    map.on('moveend', function () { document.body.classList.remove('is-moving'); });
     map.on('load', function () {
       addLayers(outline);
       buildList();
       buildLabels();
       bindUI();
-      setTimeout(startIntro, 350);
+      setTimeout(startIntro, REDUCED ? 0 : 2300);
     });
   }
 
@@ -153,14 +155,22 @@
       'fill-opacity-transition': { duration: 300 } } });
     map.addLayer({ id: 'gov-line', type: 'line', source: 'govs', paint: { 'line-color': '#EEF3E6', 'line-opacity': 0, 'line-width': 0.8 } });
     map.addLayer({ id: 'outline', type: 'line', source: 'outline', paint: { 'line-color': '#EEF3E6', 'line-opacity': 0, 'line-width': 1.6, 'line-blur': 0.4 } });
+    map.addLayer({ id: 'live-glow', type: 'line', source: 'govs', filter: ['==', ['get', 'iso'], LIVE], paint: { 'line-color': '#CDEB9F', 'line-width': 10, 'line-blur': 8, 'line-opacity': 0 } });
     map.addLayer({ id: 'live-line', type: 'line', source: 'govs', filter: ['==', ['get', 'iso'], LIVE], paint: { 'line-color': '#CDEB9F', 'line-width': 2.2, 'line-opacity': 0 } });
 
     var feats = cells.map(function (c) {
       return { type: 'Feature', id: c.i, properties: { i: c.i, p: c.p, cl: c.cl, pot: c.pot, dist: c.dist }, geometry: { type: 'Polygon', coordinates: cellPoly(c) } };
     });
     map.addSource('cells', { type: 'geojson', data: { type: 'FeatureCollection', features: feats } });
-    map.addLayer({ id: 'cells', type: 'fill-extrusion', source: 'cells', layout: { visibility: 'none' },
+    map.addLayer({ id: 'cells-ground', type: 'fill', source: 'cells', filter: ['==', ['get', 'p'], 3], layout: { visibility: 'none' },
+      paint: { 'fill-color': '#C9D2C0', 'fill-opacity': 0, 'fill-outline-color': 'rgba(0,0,0,0)' } });
+    map.addLayer({ id: 'cells', type: 'fill-extrusion', source: 'cells', filter: ['!=', ['get', 'p'], 3], layout: { visibility: 'none' },
       paint: { 'fill-extrusion-color': colorExpr(), 'fill-extrusion-height': heightExpr(), 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0, 'fill-extrusion-vertical-gradient': true } });
+    map.addLayer({ id: 'cells-cap', type: 'fill-extrusion', source: 'cells', filter: capFilter(), layout: { visibility: 'none' },
+      paint: { 'fill-extrusion-color': capColor(), 'fill-extrusion-base': heightExpr(), 'fill-extrusion-height': ['+', heightExpr(), 22], 'fill-extrusion-opacity': 0, 'fill-extrusion-vertical-gradient': false } });
+    map.addSource('pulse', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    map.addLayer({ id: 'pulse', type: 'line', source: 'pulse', paint: { 'line-color': '#CDEB9F', 'line-width': 1.4, 'line-blur': 0.6, 'line-opacity': ['get', 'o'] } });
+    map.setLight({ anchor: 'viewport', color: '#F4FFE6', intensity: 0.42, position: [1.4, 210, 38] });
     map.addLayer({ id: 'cells-sel', type: 'fill-extrusion', source: 'cells', filter: ['==', ['get', 'i'], -1],
       paint: { 'fill-extrusion-color': '#EAF8D2', 'fill-extrusion-height': ['+', heightExpr(), 30], 'fill-extrusion-opacity': 0.95 } });
     map.addSource('ring', { type: 'geojson', data: circle(state.center, 0.01) });
@@ -178,9 +188,33 @@
     var grow = ['min', 1, ['max', 0, ['/', ['-', state.reveal, ['get', 'dist']], 9]]];
     return ['+', 8, ['*', base, grow, state.h3d]];
   }
+  function capFilter() {
+    if (state.mode === 'cluster') return ['==', ['get', 'p'], -1];
+    return ['all', ['!=', ['get', 'p'], 3], ['==', ['get', FIELD[state.mode]], 0]];
+  }
+  function capColor() {
+    return { priority: '#C6FF9C', cluster: '#C6FF9C', soil: '#C6FF9C' }[state.mode];
+  }
   function refreshCells() {
-    map.setPaintProperty('cells', 'fill-extrusion-height', heightExpr());
-    map.setPaintProperty('cells-sel', 'fill-extrusion-height', ['+', heightExpr(), 30]);
+    var h = heightExpr();
+    map.setPaintProperty('cells', 'fill-extrusion-height', h);
+    map.setPaintProperty('cells-cap', 'fill-extrusion-base', h);
+    map.setPaintProperty('cells-cap', 'fill-extrusion-height', ['+', h, 22]);
+    map.setPaintProperty('cells-sel', 'fill-extrusion-height', ['+', h, 30]);
+  }
+  function setCellsVisible(on) {
+    ['cells', 'cells-cap', 'cells-ground'].forEach(function (id) { map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'); });
+  }
+  function pulseRings(t) {
+    var feats = [];
+    for (var k = 0; k < 3; k++) {
+      var p = t * 1.25 - k * 0.22;
+      if (p <= 0 || p >= 1) continue;
+      var f = circle(state.center, 4 + p * (state.maxDist + 6));
+      f.properties.o = 0.75 * (1 - p);
+      feats.push(f);
+    }
+    map.getSource('pulse').setData({ type: 'FeatureCollection', features: feats });
   }
 
   /* ---------- governorates list + labels ---------- */
@@ -253,7 +287,7 @@
 
   function startIntro() {
     $('intro').classList.add('gone');
-    setTimeout(function () { $('intro').remove(); }, 1300);
+    setTimeout(function () { var el = $('intro'); if (el) el.remove(); }, 1600);
     var cam = iraqCamera();
     if (!map.isStyleLoaded()) { /* still fine */ }
     if (REDUCED) { map.jumpTo(Object.assign({}, cam, { pitch: 0 })); }
@@ -268,7 +302,7 @@
   function fade(layer, prop, to, ms) {
     var from = map.getPaintProperty(layer, prop) || 0;
     if (typeof from !== 'number') from = 0;
-    animate(ms, function (t) { map.setPaintProperty(layer, prop, from + (to - from) * easeInOut(t)); });
+    animate(ms, function (t) { map.setPaintProperty(layer, prop, Math.max(0, Math.min(1, from + (to - from) * easeInOut(t)))); });
   }
 
   function enterIraq(first) {
@@ -293,15 +327,23 @@
     swapView('city');
     var cam = cityCamera();
     var go = function () {
-      map.setLayoutProperty('cells', 'visibility', 'visible');
+      setCellsVisible(true);
       map.setLayoutProperty('ring', 'visibility', state.minKm > 0 ? 'visible' : 'none');
       state.view = 'city';
       $('toggle-3d').hidden = false; $('reset-view').hidden = false;
-      fade('cells', 'fill-extrusion-opacity', 0.9, 900);
-      fade('live-line', 'line-opacity', 0.55, 900);
+      fade('cells', 'fill-extrusion-opacity', 0.92, 900);
+      fade('cells-cap', 'fill-extrusion-opacity', 0.95, 1400);
+      fade('cells-ground', 'fill-opacity', 0.14, 900);
+      fade('live-line', 'line-opacity', 0.7, 900);
+      fade('live-glow', 'line-opacity', 0.35, 1200);
       fade('mask', 'fill-opacity', 0.62, 900);
-      var R = state.maxDist + 12;
-      animate(2200, function (t) { state.reveal = R * easeInOut(t); refreshCells(); }, function () { placePins(); });
+      var R = state.maxDist + 12, last = 0;
+      animate(2400, function (t) {
+        var now = performance.now();
+        if (t < 1 && now - last < 80) return;
+        last = now;
+        state.reveal = R * easeInOut(t); refreshCells(); pulseRings(t);
+      }, function () { pulseRings(2); placePins(); });
     };
     if (REDUCED) { map.jumpTo(cam); go(); return; }
     map.flyTo(Object.assign({}, cam, { duration: 4200, curve: 1.6, essential: true, easing: easeInOut }));
@@ -320,9 +362,15 @@
     map.setLayoutProperty('ring', 'visibility', 'none');
     var R0 = state.reveal;
     fade('cells', 'fill-extrusion-opacity', 0, 700);
-    animate(700, function (t) { state.reveal = R0 * (1 - t); refreshCells(); }, function () {
-      map.setLayoutProperty('cells', 'visibility', 'none');
-    });
+    fade('cells-cap', 'fill-extrusion-opacity', 0, 500);
+    fade('cells-ground', 'fill-opacity', 0, 500);
+    fade('live-glow', 'line-opacity', 0, 500);
+    var lastL = 0;
+    animate(700, function (t) {
+      var now = performance.now();
+      if (t < 1 && now - lastL < 60) return;
+      lastL = now; state.reveal = R0 * (1 - t); refreshCells();
+    }, function () { setCellsVisible(false); });
     $('toggle-3d').hidden = true; $('reset-view').hidden = true;
     swapView('iraq');
     enterIraq(false);
@@ -382,12 +430,12 @@
   function placePins() {
     state.sites.forEach(function (c, k) {
       var el = document.createElement('button');
-      el.type = 'button'; el.className = 'pin'; el.textContent = k + 1;
+      el.type = 'button'; el.className = 'pin'; el.innerHTML = '<b>' + (k + 1) + '</b><i></i>';
       el.setAttribute('aria-label', 'منطقة ' + (k + 1));
       el.addEventListener('click', function (e) { e.stopPropagation(); selectCell(c, false); });
-      var m = new maplibregl.Marker({ element: el, anchor: 'bottom', offset: [0, -4] }).setLngLat([c.lon, c.lat]).addTo(map);
+      var m = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([c.lon, c.lat]).addTo(map);
       pins.push(m);
-      setTimeout(function () { el.classList.add('show'); }, REDUCED ? 0 : 60 * k);
+      setTimeout(function () { el.classList.add('show'); }, REDUCED ? 0 : 70 * k);
     });
     markSel();
   }
@@ -477,6 +525,13 @@
       var c = cells[e.features[0].properties.i];
       if (c) selectCell(c, false);
     });
+    map.on('click', 'cells-ground', function (e) {
+      if (state.view !== 'city' || !e.features.length) return;
+      var hit = map.queryRenderedFeatures(e.point, { layers: ['cells'] });
+      if (hit.length) return;
+      var c = cells[e.features[0].properties.i];
+      if (c) selectCell(c, false);
+    });
     map.on('mouseenter', 'cells', function () { if (state.view === 'city') map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', 'cells', function () { map.getCanvas().style.cursor = ''; });
 
@@ -487,6 +542,8 @@
         Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (o) { o.setAttribute('aria-checked', o === b ? 'true' : 'false'); });
         state.mode = b.dataset.mode;
         map.setPaintProperty('cells', 'fill-extrusion-color', colorExpr());
+        map.setPaintProperty('cells-cap', 'fill-extrusion-color', capColor());
+        map.setFilter('cells-cap', capFilter());
         refreshCells();
         renderLegend();
       });
