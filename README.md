@@ -2,15 +2,25 @@
 
 Interactive priority map for tree-planting campaigns in Baghdad. Team SiTouch, Green Code Hackathon.
 
-Static site, with no build step and no server.
+Static site, with no build step and no server. It opens straight onto a 3D map of Iraq. Baghdad is live; the other governorates are marked "soon".
 
 ```
-index.html            landing page and map
-assets/style.css      styles
-assets/app.js         map logic (Leaflet)
-assets/vendor/        Leaflet 1.9.4, bundled so the site doesn't depend on a CDN
-data/cells.json       6,011 cells from the final notebook (GreenSite_AI_Baghdad_Greening_MVP_clean)
+index.html                 the map app
+assets/style.css           styles
+assets/app.js              camera choreography, governorate list, Baghdad tools
+assets/vendor/maplibre/    MapLibre GL JS 5.22 (BSD-3), bundled locally
+assets/vendor/fonts/       Readex Pro and IBM Plex Sans Arabic (SIL OFL), bundled locally
+data/cells.json            6,011 cells from the final notebook (GreenSite_AI_Baghdad_Greening_MVP_clean)
+data/iraq.geojson          18 governorates, simplified from Natural Earth (public domain)
+data/iraq-outline.geojson  Iraq outline (Natural Earth)
 ```
+
+Satellite imagery comes from Esri World Imagery and needs an internet connection.
+
+## Adding a governorate later
+
+1. Export its cells from the notebook in the same format as `data/cells.json`.
+2. In `assets/app.js`, turn the `LIVE` constant into a list and load that governorate's data file.
 
 ## Run locally
 
@@ -39,6 +49,3 @@ This uses the same logic as Step 10A in the notebook:
 
 The results were checked against the notebook at 0, 20, 30 and 40 km, and all four match exactly.
 
-## Team
-
-Edit the `#team-grid` section in `index.html`.
