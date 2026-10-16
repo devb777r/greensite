@@ -61,12 +61,22 @@
         <button type="button" role="radio" aria-checked="false" data-mode="cluster">K-Means</button>
         <button type="button" role="radio" aria-checked="false" data-mode="soil">التربة</button>
       </div>
-      <div class="legend" id="legend"></div>
+      <div class="legend-h"><span class="field-l" id="lg-l">اعرض بس</span><button type="button" class="link" id="legend-all" hidden>اعرض الكل</button></div>
+      <div class="legend" id="legend" role="group" aria-labelledby="lg-l"></div>
     </div>
 
     <div class="field">
       <label class="field-l" for="dist">أفضل 20 منطقة، تبعد عن المركز <output id="dist-out" for="dist">0 كم</output> أو أكثر</label>
       <input type="range" id="dist" min="0" max="50" step="1" value="0">
+    </div>
+
+    <div class="field">
+      <span class="field-l" id="scope-l">الخلايا على الخريطة</span>
+      <div class="seg" role="radiogroup" aria-labelledby="scope-l">
+        <button type="button" role="radio" aria-checked="true" data-scope="all">كل الخلايا</button>
+        <button type="button" role="radio" aria-checked="false" data-scope="top100">أفضل 100</button>
+        <button type="button" role="radio" aria-checked="false" data-scope="top20">أفضل 20</button>
+      </div>
     </div>
 
     <ol class="sites" id="sites"></ol>

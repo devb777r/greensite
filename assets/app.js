@@ -26,9 +26,9 @@
       def: 'فرز أولي بس: افحص استخدام الأرض ووصول المي بالموقع.' }
   };
   var COL = {
-    priority: ['#8EE06A', '#F2B84B', '#C77B5C', '#3C4538'],
-    cluster: ['#E3925A', '#A994F5', '#62C795', '#3C4538'],
-    soil: ['#8EE06A', '#E6CB57', '#D98656', '#3C4538']
+    priority: ['#1E8C3A', '#D97416', '#A3241C', '#596152'],
+    cluster: ['#B5541C', '#5A42B5', '#1C7A4E', '#596152'],
+    soil: ['#1E8C3A', '#B88C14', '#A3461A', '#596152']
   };
   var FIELD = { priority: 'p', cluster: 'cl', soil: 'pot' };
   var HEIGHT = {
@@ -38,7 +38,7 @@
   };
 
   var $ = function (id) { return document.getElementById(id); };
-  var state = { view: 'intro', mode: 'priority', minKm: 0, reveal: 0, h3d: 1, sel: null, sites: [] };
+  var state = { view: 'intro', mode: 'priority', pick: [], scope: 'all', minKm: 0, reveal: 0, h3d: 1, sel: null, sites: [] };
   var map, cells = [], govs, pins = [], labels = {}, hoverId = null;
 
   /* ---------- helpers ---------- */
@@ -122,7 +122,7 @@
       var x = (d.lon[i] - clon) * Math.PI / 180 * cosc * R_EARTH, y = (d.lat[i] - clat) * Math.PI / 180 * R_EARTH;
       cells.push({ i: i, id: d.id[i], lat: d.lat[i], lon: d.lon[i], rank: d.rank[i], p: d.p[i], cl: d.cl[i], pot: d.pot[i], grp: d.grp[i], lc: d.lc[i],
         conf: d.conf[i], ndvi: d.ndvi[i], chg: d.chg[i], anom: d.anom[i], soc: d.soc[i], sand: d.sand[i], sig: d.sig[i], unc: d.unc[i],
-        x: x, y: y, dist: Math.round(Math.hypot(x, y) / 10) / 100 });
+        x: x, y: y, t100: d.t100[i], dist: Math.round(Math.hypot(x, y) / 10) / 100 });
     }
     state.pool = cells.filter(function (c) { return c.p !== 3; }).sort(function (a, b) { return a.rank - b.rank || a.id - b.id; });
     state.maxDist = Math.max.apply(null, cells.map(function (c) { return c.dist; }));
@@ -165,11 +165,11 @@
     map.addLayer({ id: 'live-line', type: 'line', source: 'govs', filter: ['==', ['get', 'iso'], LIVE], paint: { 'line-color': '#CDEB9F', 'line-width': 2.2, 'line-opacity': 0 } });
 
     var feats = cells.map(function (c) {
-      return { type: 'Feature', id: c.i, properties: { i: c.i, p: c.p, cl: c.cl, pot: c.pot, dist: c.dist }, geometry: { type: 'Polygon', coordinates: cellPoly(c) } };
+      return { type: 'Feature', id: c.i, properties: { i: c.i, p: c.p, cl: c.cl, pot: c.pot, dist: c.dist, t100: c.t100 }, geometry: { type: 'Polygon', coordinates: cellPoly(c) } };
     });
     map.addSource('cells', { type: 'geojson', data: { type: 'FeatureCollection', features: feats } });
     map.addLayer({ id: 'cells-ground', type: 'fill', source: 'cells', filter: ['==', ['get', 'p'], 3], layout: { visibility: 'none' },
-      paint: { 'fill-color': '#C9D2C0', 'fill-opacity': 0, 'fill-outline-color': 'rgba(0,0,0,0)' } });
+      paint: { 'fill-color': '#7E8778', 'fill-opacity': 0, 'fill-outline-color': 'rgba(0,0,0,0)' } });
     map.addLayer({ id: 'cells', type: 'fill-extrusion', source: 'cells', filter: ['!=', ['get', 'p'], 3], layout: { visibility: 'none' },
       paint: { 'fill-extrusion-color': colorExpr(), 'fill-extrusion-height': heightExpr(), 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0, 'fill-extrusion-vertical-gradient': true } });
     map.addLayer({ id: 'cells-cap', type: 'fill-extrusion', source: 'cells', filter: capFilter(), layout: { visibility: 'none' },
@@ -194,12 +194,33 @@
     var grow = ['min', 1, ['max', 0, ['/', ['-', state.reveal, ['get', 'dist']], 9]]];
     return ['+', 8, ['*', base, grow, state.h3d]];
   }
+  function catFilter() {
+    return state.pick.length ? ['in', ['get', FIELD[state.mode]], ['literal', state.pick]] : true;
+  }
+  function scopeFilter() {
+    if (state.scope === 'top100') return ['==', ['get', 't100'], 1];
+    if (state.scope === 'top20') return ['in', ['get', 'i'], ['literal', (state.sites || []).map(function (c) { return c.i; })]];
+    return true;
+  }
   function capFilter() {
     if (state.mode === 'cluster') return ['==', ['get', 'p'], -1];
-    return ['all', ['!=', ['get', 'p'], 3], ['==', ['get', FIELD[state.mode]], 0]];
+    return ['all', ['!=', ['get', 'p'], 3], ['==', ['get', FIELD[state.mode]], 0], catFilter(), scopeFilter()];
   }
   function capColor() {
-    return { priority: '#C6FF9C', cluster: '#C6FF9C', soil: '#C6FF9C' }[state.mode];
+    return '#52C96B';
+  }
+  function inView(c) {
+    if (state.scope === 'top100' && !c.t100) return false;
+    if (state.scope === 'top20' && (state.sites || []).indexOf(c) < 0) return false;
+    return true;
+  }
+  // which cells the map shows: chosen colour categories x chosen scope (all / top 100 / top 20)
+  function applyFilters() {
+    if (!map || !map.getLayer('cells')) return;
+    map.setFilter('cells', ['all', ['!=', ['get', 'p'], 3], catFilter(), scopeFilter()]);
+    map.setFilter('cells-ground', ['all', ['==', ['get', 'p'], 3], catFilter(), scopeFilter()]);
+    map.setFilter('cells-cap', capFilter());
+    renderLegend();
   }
   function refreshCells() {
     var h = heightExpr();
@@ -356,9 +377,9 @@
       map.setLayoutProperty('ring', 'visibility', state.minKm > 0 ? 'visible' : 'none');
       state.view = 'city';
       $('toggle-3d').hidden = false; $('reset-view').hidden = false;
-      fade('cells', 'fill-extrusion-opacity', 0.92, 900);
+      fade('cells', 'fill-extrusion-opacity', 0.97, 900);
       fade('cells-cap', 'fill-extrusion-opacity', 0.95, 1400);
-      fade('cells-ground', 'fill-opacity', 0.14, 900);
+      fade('cells-ground', 'fill-opacity', 0.42, 900);
       fade('live-line', 'line-opacity', 0.7, 900);
       fade('live-glow', 'line-opacity', 0.35, 1200);
       fade('mask', 'fill-opacity', 0.62, 900);
@@ -412,13 +433,15 @@
   /* ---------- Baghdad tools ---------- */
   function renderLegend() {
     var f = FIELD[state.mode], counts = [0, 0, 0, 0];
-    cells.forEach(function (c) { counts[c[f]]++; });
+    cells.forEach(function (c) { if (inView(c)) counts[c[f]]++; });
     var html = '';
     L.legend[state.mode].forEach(function (nm, k) {
-      if (!counts[k]) return;
-      html += '<span><i style="background:' + COL[state.mode][k] + '"></i>' + nm + '<em>' + nf(counts[k]) + '</em></span>';
+      var on = state.pick.indexOf(k) >= 0;
+      html += '<button type="button" class="lg' + (on ? ' on' : '') + (state.pick.length && !on ? ' off' : '') + '" data-k="' + k + '" aria-pressed="' + on + '"' + (counts[k] ? '' : ' disabled') + '>' +
+        '<i style="background:' + COL[state.mode][k] + '"></i><span>' + nm + '</span><em>' + nf(counts[k]) + '</em></button>';
     });
     $('legend').innerHTML = html;
+    $('legend-all').hidden = !state.pick.length;
   }
 
   function pickSites(minKm) {
@@ -446,6 +469,7 @@
       ol.appendChild(li);
     });
     if (state.view === 'city') { clearPins(); placePins(); }
+    if (state.scope === 'top20') applyFilters();
     map.getSource('ring').setData(circle(state.center, Math.max(0.01, state.minKm)));
     if (state.view === 'city') map.setLayoutProperty('ring', 'visibility', state.minKm > 0 ? 'visible' : 'none');
     markSel();
@@ -641,9 +665,24 @@
         state.mode = b.dataset.mode;
         map.setPaintProperty('cells', 'fill-extrusion-color', colorExpr());
         map.setPaintProperty('cells-cap', 'fill-extrusion-color', capColor());
-        map.setFilter('cells-cap', capFilter());
+        state.pick = [];
         refreshCells();
-        renderLegend();
+        applyFilters();
+      });
+    });
+
+    $('legend').addEventListener('click', function (e) {
+      var b = e.target.closest('.lg'); if (!b || b.disabled) return;
+      var k = +b.dataset.k, at = state.pick.indexOf(k);
+      if (at >= 0) state.pick.splice(at, 1); else state.pick.push(k);
+      applyFilters();
+    });
+    $('legend-all').addEventListener('click', function () { state.pick = []; applyFilters(); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-scope]'), function (b) {
+      b.addEventListener('click', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-scope]'), function (o) { o.setAttribute('aria-checked', o === b ? 'true' : 'false'); });
+        state.scope = b.dataset.scope;
+        applyFilters();
       });
     });
 
