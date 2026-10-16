@@ -9,7 +9,7 @@ index.html                 the map app
 assets/style.css           styles
 assets/app.js              camera choreography, governorate list, Baghdad tools
 assets/scene3d.js          the realistic Earth intro (Three.js)
-assets/cube/               the team's cube render split into faces and canopy; scene3d.js rebuilds it as a turning 3D cube
+assets/cube/               the team's cube render: two glass faces, soil, and a foliage atlas; scene3d.js rebuilds it as a turning 3D cube with 3D trees
 assets/cube.webp           the same render as a flat image, used when WebGL isn't available
 assets/earth/              Earth textures: NASA Blue Marble and Black Marble (public domain)
 assets/vendor/three/       Three.js r170 (MIT), bundled locally

@@ -581,7 +581,7 @@
       $('detail').classList.toggle('has3d', !!cube);
       var target = cube ? cv : img;
       target.style.setProperty('--cf', cubeFilter(c));
-      if (cube) cube.show();
+      if (cube) cube.show(c);
       target.classList.remove('in'); void target.offsetWidth; target.classList.add('in');
       if (wasHidden) $('d-close').focus();
     });
@@ -666,15 +666,6 @@
 
     $('grip').addEventListener('click', function () { $('panel').classList.toggle('min'); });
     $('d-close').addEventListener('click', closeDetail);
-    var stage = document.querySelector('.d-stage'), tiltEl = $('cube-tilt');
-    stage.addEventListener('pointermove', function (e) {
-      if (REDUCED) return;
-      var r = $('cube-wrap').getBoundingClientRect();
-      var x = (e.clientX - (r.left + r.width / 2)) / r.width, y = (e.clientY - (r.top + r.height / 2)) / r.height;
-      tiltEl.style.setProperty('--ry', (Math.max(-1, Math.min(1, x)) * 14).toFixed(2) + 'deg');
-      tiltEl.style.setProperty('--rx', (Math.max(-1, Math.min(1, y)) * -9).toFixed(2) + 'deg');
-    });
-    stage.addEventListener('pointerleave', function () { tiltEl.style.setProperty('--ry', '0deg'); tiltEl.style.setProperty('--rx', '0deg'); });
     $('detail').addEventListener('click', function (e) { if (e.target === this) closeDetail(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('detail').hidden) closeDetail(); });
   }
