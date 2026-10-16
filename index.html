@@ -11,6 +11,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="assets/vendor/fonts/readex-pro-arabic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/earth/day.jpg" as="image">
+<link rel="prefetch" href="assets/cube.webp" as="image">
 <link rel="modulepreload" href="assets/vendor/three/three.module.min.js">
 <link rel="stylesheet" href="assets/vendor/maplibre/maplibre-gl.css">
 <link rel="stylesheet" href="assets/style.css">
@@ -95,8 +96,16 @@
     <span class="badge" id="d-badge"></span>
   </header>
   <div class="d-stage">
-    <canvas id="cube" aria-label="مجسم ثلاثي الأبعاد للخلية"></canvas>
-    <p class="d-hint">اسحب حتى تدوّر المجسم</p>
+    <div class="cube-wrap" id="cube-wrap">
+      <span class="cube-glow" aria-hidden="true"></span>
+      <div class="cube-tilt" id="cube-tilt">
+        <div class="cube-sway">
+          <canvas id="cube3d" aria-label="مجسم الخلية، تكدر تسحبه حتى تدوّره"></canvas>
+          <img id="cube-img" src="assets/cube.webp" alt="مجسم الخلية" draggable="false" decoding="async">
+          <span class="cube-shine" aria-hidden="true"></span>
+        </div>
+      </div>
+    </div>
   </div>
   <article class="g-card d-prio" id="d-prio"></article>
   <article class="g-card d-green" id="d-green"></article>

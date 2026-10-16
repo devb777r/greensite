@@ -517,6 +517,16 @@
     return '<div class="hb"><div class="hb-top"><span>' + label + '</span><b dir="ltr">' + (v === null || v === undefined ? '—' : (unit === 'int' ? Math.round(v) : v.toFixed(1))) + '</b></div><div class="hb-track"><i style="width:' + w.toFixed(1) + '%"></i></div></div>';
   }
 
+  // One render of the cube, recoloured to match the cell: lush, thinning, dry, built-up or water.
+  function cubeFilter(c) {
+    var g = clamp01(((c.ndvi == null ? 0.1 : c.ndvi) - 0.05) / 0.36);
+    var dcl = c.chg != null && c.chg < 0 ? clamp01(-c.chg / 0.16) : 0;
+    if (c.lc === 6) return 'hue-rotate(68deg) saturate(1.15) brightness(0.95)';
+    if (c.lc === 5) return 'grayscale(0.85) brightness(0.9) contrast(1.06)';
+    if (g < 0.25) return 'sepia(0.72) saturate(0.8) hue-rotate(-12deg) brightness(0.9)';
+    return 'saturate(' + (0.6 + 0.55 * g).toFixed(2) + ') brightness(' + (0.84 + 0.2 * g).toFixed(2) + ') sepia(' + ((1 - g) * 0.4 + dcl * 0.28).toFixed(2) + ') hue-rotate(' + (-(1 - g) * 10 - dcl * 8).toFixed(1) + 'deg)';
+  }
+
   function openDetail(c) {
     var k = state.sites.indexOf(c), col = COL.priority[c.p], N = cells.length;
     var pct = Math.max(1, Math.ceil(c.rank / N * 100));
@@ -566,8 +576,13 @@
     d.hidden = false;
     requestAnimationFrame(function () {
       d.classList.add('open');
-      if (window.GS3 && !cube) { try { cube = window.GS3.createCube($('cube')); } catch (e) { cube = null; } }
-      if (cube) cube.show(c); else d.classList.add('no3d');
+      var img = $('cube-img'), cv = $('cube3d');
+      if (window.GS3 && window.GS3.createPhotoCube && !cube) { try { cube = window.GS3.createPhotoCube(cv); } catch (e) { cube = null; } }
+      $('detail').classList.toggle('has3d', !!cube);
+      var target = cube ? cv : img;
+      target.style.setProperty('--cf', cubeFilter(c));
+      if (cube) cube.show();
+      target.classList.remove('in'); void target.offsetWidth; target.classList.add('in');
       if (wasHidden) $('d-close').focus();
     });
   }
@@ -651,6 +666,15 @@
 
     $('grip').addEventListener('click', function () { $('panel').classList.toggle('min'); });
     $('d-close').addEventListener('click', closeDetail);
+    var stage = document.querySelector('.d-stage'), tiltEl = $('cube-tilt');
+    stage.addEventListener('pointermove', function (e) {
+      if (REDUCED) return;
+      var r = $('cube-wrap').getBoundingClientRect();
+      var x = (e.clientX - (r.left + r.width / 2)) / r.width, y = (e.clientY - (r.top + r.height / 2)) / r.height;
+      tiltEl.style.setProperty('--ry', (Math.max(-1, Math.min(1, x)) * 14).toFixed(2) + 'deg');
+      tiltEl.style.setProperty('--rx', (Math.max(-1, Math.min(1, y)) * -9).toFixed(2) + 'deg');
+    });
+    stage.addEventListener('pointerleave', function () { tiltEl.style.setProperty('--ry', '0deg'); tiltEl.style.setProperty('--rx', '0deg'); });
     $('detail').addEventListener('click', function (e) { if (e.target === this) closeDetail(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('detail').hidden) closeDetail(); });
   }
