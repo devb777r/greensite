@@ -10,12 +10,15 @@
 <meta name="theme-color" content="#0A120D">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="assets/vendor/fonts/readex-pro-arabic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/earth/day.jpg" as="image">
+<link rel="modulepreload" href="assets/vendor/three/three.module.min.js">
 <link rel="stylesheet" href="assets/vendor/maplibre/maplibre-gl.css">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body class="is-intro">
 
 <div id="map" aria-label="خريطة العراق"></div>
+<canvas id="earth" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
 
 <aside class="panel" id="panel" aria-label="لوحة التحكم">
@@ -84,7 +87,21 @@
   </button>
 </div>
 
-<article class="card" id="card" hidden aria-live="polite"></article>
+<section class="detail" id="detail" hidden role="dialog" aria-modal="true" aria-labelledby="d-title">
+  <button class="d-close" id="d-close" type="button" aria-label="سكّر التفاصيل"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  <header class="d-head">
+    <h2 id="d-title"></h2>
+    <p id="d-sub"></p>
+    <span class="badge" id="d-badge"></span>
+  </header>
+  <div class="d-stage">
+    <canvas id="cube" aria-label="مجسم ثلاثي الأبعاد للخلية"></canvas>
+    <p class="d-hint">اسحب حتى تدوّر المجسم</p>
+  </div>
+  <article class="g-card d-prio" id="d-prio"></article>
+  <article class="g-card d-green" id="d-green"></article>
+  <article class="g-card d-soil" id="d-soil"></article>
+</section>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -95,6 +112,7 @@
 </div>
 
 <script src="assets/vendor/maplibre/maplibre-gl.js"></script>
+<script type="module" src="assets/scene3d.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>

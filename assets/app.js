@@ -68,6 +68,12 @@
   }
 
   /* ---------- boot ---------- */
+  var gs3Ready = new Promise(function (resolve) {
+    if ('GS3' in window) return resolve(window.GS3);
+    window.addEventListener('gs3', function () { resolve(window.GS3); }, { once: true });
+    setTimeout(function () { resolve(window.GS3 || null); }, 6000);
+  });
+  var earth = null, cube = null, lastFocus = null;
   Promise.all([
     fetch('data/cells.json').then(function (r) { return r.json(); }),
     fetch('data/iraq.geojson').then(function (r) { return r.json(); }),
@@ -82,8 +88,7 @@
       container: 'map',
       style: {
         version: 8,
-        projection: { type: ['interpolate', ['linear'], ['zoom'], 2.6, 'vertical-perspective', 4.2, 'mercator'] },
-        sky: { 'sky-color': '#0A120D', 'horizon-color': '#1d3324', 'fog-color': '#0A120D', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.6, 'fog-ground-blend': 0.6, 'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 6, 0.6, 9, 0] },
+        projection: { type: 'mercator' },
         sources: {
           sat: { type: 'raster', tileSize: 256, maxzoom: 18,
             tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
@@ -94,8 +99,8 @@
           { id: 'sat', type: 'raster', source: 'sat', paint: { 'raster-saturation': -0.12, 'raster-brightness-max': 0.9, 'raster-contrast': 0.06, 'raster-fade-duration': 400 } }
         ]
       },
-      center: [38, 24], zoom: MOBILE() ? 0.9 : 1.5, pitch: 0, bearing: 0,
-      maxPitch: 65, maxZoom: 14, minZoom: 0.6, attributionControl: { compact: true }, dragRotate: true
+      center: [43.7, 33.2], zoom: 5, pitch: 0, bearing: 0,
+      maxPitch: 65, maxZoom: 14, minZoom: 3, attributionControl: { compact: true }, dragRotate: true
     });
 
     map.on('movestart', function () { document.body.classList.add('is-moving'); });
@@ -105,7 +110,8 @@
       buildList();
       buildLabels();
       bindUI();
-      setTimeout(startIntro, REDUCED ? 0 : 2300);
+      map.jumpTo(Object.assign({}, iraqCamera(), { pitch: 0 }));
+      gs3Ready.then(startIntro);
     });
   }
 
@@ -285,18 +291,37 @@
     return map.cameraForBounds([[38.77, 29.06], [48.56, 37.37]], { padding: panelPad() });
   }
 
-  function startIntro() {
-    $('intro').classList.add('gone');
-    setTimeout(function () { var el = $('intro'); if (el) el.remove(); }, 1600);
-    var cam = iraqCamera();
-    if (!map.isStyleLoaded()) { /* still fine */ }
-    if (REDUCED) { map.jumpTo(Object.assign({}, cam, { pitch: 0 })); }
-    else {
-      map.flyTo(Object.assign({}, cam, { pitch: 18, bearing: 0, duration: 5200, curve: 1.25, essential: true,
-        easing: function (t) { return easeInOut(t); } }));
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, REDUCED ? 0 : ms); }); }
+
+  function startIntro(GS) {
+    var t0 = performance.now();
+    var land = function () {
+      document.body.classList.add('map-on');
+      document.body.classList.remove('is-intro');
+      enterIraq(true);
+      map.easeTo({ pitch: 18, duration: REDUCED ? 0 : 2200, easing: easeInOut });
+      if (earth) {
+        $('earth').classList.add('gone');
+        setTimeout(function () { earth.dispose(); earth = null; var c = $('earth'); if (c) c.remove(); }, 1600);
+      }
+    };
+    if (GS) {
+      try { earth = GS.createEarth($('earth')); } catch (e) { earth = null; }
     }
-    setTimeout(function () { document.body.classList.remove('is-intro'); }, REDUCED ? 0 : 2600);
-    setTimeout(function () { enterIraq(true); }, REDUCED ? 0 : 3400);
+    if (!earth) {
+      $('earth').remove();
+      wait(2300).then(function () { $('intro').classList.add('gone'); setTimeout(function () { var el = $('intro'); if (el) el.remove(); }, 1600); land(); });
+      return;
+    }
+    earth.ready.then(function () {
+      return wait(Math.max(0, 2300 - (performance.now() - t0)));
+    }).then(function () {
+      $('intro').classList.add('gone');
+      setTimeout(function () { var el = $('intro'); if (el) el.remove(); }, 1600);
+      return wait(900);
+    }).then(function () {
+      return earth.flyTo(43.8, 33.2, REDUCED ? 0 : 5200, MOBILE() ? 1.6 : 1.36);
+    }).then(land);
   }
 
   function fade(layer, prop, to, ms) {
@@ -449,48 +474,106 @@
   function selectCell(c, fly) {
     state.sel = c;
     map.setFilter('cells-sel', ['==', ['get', 'i'], c.i]);
-    if (fly) map.flyTo({ center: [c.lon, c.lat], zoom: Math.max(map.getZoom(), 11.3), pitch: state.h3d ? 52 : 0, duration: REDUCED ? 0 : 1600, essential: true, padding: panelPad() });
-    renderCard(c);
     markSel();
-    if (MOBILE()) $('panel').classList.add('min');
+    if (fly && !REDUCED) {
+      map.flyTo({ center: [c.lon, c.lat], zoom: Math.max(map.getZoom(), 11.3), pitch: state.h3d ? 52 : 0, duration: 1400, essential: true, padding: panelPad() });
+      map.once('moveend', function () { if (state.sel === c) openDetail(c); });
+    } else {
+      openDetail(c);
+    }
   }
   function closeCard() {
     state.sel = null;
-    $('card').hidden = true;
+    closeDetail();
     if (map.getLayer('cells-sel')) map.setFilter('cells-sel', ['==', ['get', 'i'], -1]);
     markSel();
+  }
+  function closeDetail() {
+    var d = $('detail');
+    if (d.hidden) return;
+    d.classList.remove('open');
+    setTimeout(function () { d.hidden = true; if (cube) cube.stop(); }, REDUCED ? 0 : 380);
+    if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
   }
 
   function fmt(v, d, sign) { if (v === null || v === undefined) return '—'; var s = v.toFixed(d); return sign && v > 0 ? '+' + s : s; }
 
-  function renderCard(c) {
-    var k = state.sites.indexOf(c), col = COL.priority[c.p];
-    var sig = [];
-    if (c.sig & 1) sig.push('الخضرة الحالية منخفضة مقارنة ببقية بغداد');
-    if (c.sig & 2) sig.push('الخضرة نزلت عن الـ 12 شهر السابقة');
-    if (c.sig & 4) sig.push('أقل من مستواها المعتاد بنفس الأشهر');
+  var ARROW = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 16 16 8M10 8h6v6"/></svg>';
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+  function vbar(label, value, txt, kind) {
+    var html = '<div class="vb"><span class="vb-v" dir="ltr">' + txt + '</span><div class="vb-track' + (kind === 'div' ? ' div' : '') + '">';
+    if (value === null || value === undefined) html += '';
+    else if (kind === 'div') {
+      var h = clamp01(Math.abs(value) / 0.2) * 50;
+      html += '<i class="' + (value < 0 ? 'neg' : 'pos') + '" style="height:' + h.toFixed(1) + '%"></i>';
+    } else {
+      html += '<i class="pos up" style="height:' + (clamp01(value / 0.6) * 100).toFixed(1) + '%"></i>';
+    }
+    return html + '</div><span class="vb-l">' + label + '</span></div>';
+  }
+  function hbar(label, v, max, unit) {
+    var w = v === null || v === undefined ? 0 : clamp01(v / max) * 100;
+    return '<div class="hb"><div class="hb-top"><span>' + label + '</span><b dir="ltr">' + (v === null || v === undefined ? '—' : (unit === 'int' ? Math.round(v) : v.toFixed(1))) + '</b></div><div class="hb-track"><i style="width:' + w.toFixed(1) + '%"></i></div></div>';
+  }
+
+  function openDetail(c) {
+    var k = state.sites.indexOf(c), col = COL.priority[c.p], N = cells.length;
+    var pct = Math.max(1, Math.ceil(c.rank / N * 100));
+    var fill = (1 - (c.rank - 1) / (N - 1)) * 100;
+    var nSig = (c.sig & 1 ? 1 : 0) + (c.sig & 2 ? 1 : 0) + (c.sig & 4 ? 1 : 0);
     var lim = ['نوع الأرض قيمة وحدة بمركز الخلية'];
     if (c.unc & 1) lim.push('بيانات التربة ناقصة');
     if (c.unc & 2) lim.push('بعض الأشهر الأخيرة قراءتها غير موثوقة');
     if (c.unc & 4) lim.push('ماكو مقارنة موسمية');
-    var soil = c.soc === null ? 'بيانات التربة ناقصة، ومو معناها تربة ضعيفة' : L.soil[c.pot] + ': كربون عضوي ' + c.soc.toFixed(1) + ' غم/كغم، رمل ' + Math.round(c.sand) + ' غم/كغم';
     var gm = 'https://www.google.com/maps/search/?api=1&query=' + c.lat.toFixed(6) + ',' + c.lon.toFixed(6);
-    $('card').innerHTML =
-      '<div class="card-h"><h3>' + (k >= 0 ? 'منطقة ' + (k + 1) + ' من 20' : L.lc[c.lc]) + '<small>خلية ' + c.id + '، ترتيب ' + nf(c.rank) + ' من ' + nf(cells.length) + '</small></h3>' +
-      '<button class="x" id="card-x" type="button" aria-label="سكّر التفاصيل"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
-      '<span class="badge" style="background:' + col + '22;color:' + col + ';border:1px solid ' + col + '55">' + L.priority[c.p] + '</span>' +
-      '<div class="metrics"><div class="metric"><span>NDVI</span><b>' + fmt(c.ndvi, 2) + '</b></div><div class="metric"><span>التغير</span><b>' + fmt(c.chg, 2, true) + '</b></div><div class="metric"><span>الموسمي</span><b>' + fmt(c.anom, 2, true) + '</b></div></div>' +
-      '<dl class="rows"><dt>نوع الأرض</dt><dd>' + L.lc[c.lc] + '</dd><dt>المجموعة</dt><dd>' + L.group[c.grp] + '</dd><dt>البعد عن المركز</dt><dd>' + c.dist.toFixed(1) + ' كم</dd><dt>ثقة البيانات</dt><dd>' + L.conf[c.conf] + '</dd></dl>' +
-      '<div class="why"><b>ليش هالترتيب</b>' + (sig.length ? '<ul><li>' + sig.join('</li><li>') + '</li></ul>' : 'ماكو إشارة حاجة واضحة.') + '</div>' +
-      '<div class="why"><b>التربة</b>' + soil + '</div>' +
-      '<div class="why"><b>قبل ما تنزل</b><span class="note">' + (L.note[c.lc] || L.note.def) + '</span></div>' +
-      '<div class="why"><b>حدود البيانات</b>' + lim.join('، ') + '.</div>' +
+
+    $('d-title').textContent = k >= 0 ? 'منطقة ' + (k + 1) + ' من أفضل 20' : L.lc[c.lc];
+    $('d-sub').textContent = (k >= 0 ? L.lc[c.lc] + '، ' : '') + 'خلية ' + c.id + '، تبعد ' + c.dist.toFixed(1) + ' كم عن مركز بغداد';
+    var b = $('d-badge'); b.textContent = L.priority[c.p];
+    b.style.cssText = 'background:' + col + '22;color:' + col + ';border:1px solid ' + col + '55';
+
+    $('d-prio').innerHTML =
+      '<div class="gc-h"><h3>أولوية التشجير</h3><a class="gc-ic" href="' + gm + '" target="_blank" rel="noopener noreferrer" aria-label="افتح الموقع بـ Google Maps">' + ARROW + '</a></div>' +
+      '<p class="big"><b dir="ltr">' + pct + '%</b><span>من أعلى الخلايا أولوية</span></p>' +
+      '<div class="meter"><i style="width:' + fill.toFixed(1) + '%"></i><span class="tick" style="inset-inline-start:' + fill.toFixed(1) + '%"></span></div>' +
+      '<p class="gc-cap"><span class="pill2">' + nSig + ' من 3 إشارات حاجة</span> ترتيب ' + nf(c.rank) + ' من ' + nf(N) + '</p>' +
+      '<ul class="sig-rows">' +
+      '<li class="' + (c.sig & 1 ? 'on' : '') + '"><span>خضرة منخفضة مقارنة ببغداد</span><em dir="ltr">' + fmt(c.ndvi, 2) + '</em></li>' +
+      '<li class="' + (c.sig & 2 ? 'on' : '') + '"><span>نزلت عن الـ 12 شهر السابقة</span><em dir="ltr">' + fmt(c.chg, 2, true) + '</em></li>' +
+      '<li class="' + (c.sig & 4 ? 'on' : '') + '"><span>أقل من مستواها المعتاد</span><em dir="ltr">' + fmt(c.anom, 2, true) + '</em></li></ul>';
+
+    $('d-green').innerHTML =
+      '<div class="gc-h"><h3>مؤشرات الخضرة</h3><span class="gc-tag">آخر 12 شهر</span></div>' +
+      '<div class="vbars">' +
+      vbar('NDVI', c.ndvi, fmt(c.ndvi, 2), 'up') +
+      vbar('التغير السنوي', c.chg, fmt(c.chg, 2, true), 'div') +
+      vbar('الفرق الموسمي', c.anom, fmt(c.anom, 2, true), 'div') +
+      '</div><p class="gc-foot">' + L.cluster[c.cl] + ' (K-Means)</p>';
+
+    $('d-soil').innerHTML =
+      '<div class="gc-h"><h3>الأرض والتربة</h3><span class="gc-tag">' + L.soil[c.pot] + '</span></div>' +
+      (c.soc === null ? '<p class="gc-muted">بيانات التربة ناقصة بهالخلية، ومو معناها تربة ضعيفة.</p>' :
+        hbar('كربون عضوي، غم/كغم', c.soc, 20) + hbar('رمل، غم/كغم', c.sand, 700, 'int')) +
+      '<dl class="chips"><div><dt>نوع الأرض</dt><dd>' + L.lc[c.lc] + '</dd></div><div><dt>المجموعة</dt><dd>' + L.group[c.grp] + '</dd></div><div><dt>ثقة البيانات</dt><dd>' + L.conf[c.conf] + '</dd></div></dl>' +
+      '<p class="note">' + (L.note[c.lc] || L.note.def) + '</p>' +
+      '<p class="gc-muted">' + lim.join('، ') + '.</p>' +
       '<a class="gm" href="' + gm + '" target="_blank" rel="noopener noreferrer">افتح الموقع بـ Google Maps</a>';
-    $('card').hidden = false;
-    $('card-x').addEventListener('click', closeCard);
+
+    var d = $('detail');
+    var wasHidden = d.hidden;
+    if (wasHidden) lastFocus = document.activeElement;
+    d.hidden = false;
+    requestAnimationFrame(function () {
+      d.classList.add('open');
+      if (window.GS3 && !cube) { try { cube = window.GS3.createCube($('cube')); } catch (e) { cube = null; } }
+      if (cube) cube.show(c); else d.classList.add('no3d');
+      if (wasHidden) $('d-close').focus();
+    });
   }
 
   /* ---------- UI bindings ---------- */
+  window.__gsOpen = function (i) { if (state.view === 'city') selectCell(cells[i], false); };
   function bindUI() {
     $('c-cells').textContent = nf(cells.length);
     $('dist').max = Math.floor(state.maxDist - 6);
@@ -567,6 +650,8 @@
     });
 
     $('grip').addEventListener('click', function () { $('panel').classList.toggle('min'); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.sel) closeCard(); });
+    $('d-close').addEventListener('click', closeDetail);
+    $('detail').addEventListener('click', function (e) { if (e.target === this) closeDetail(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('detail').hidden) closeDetail(); });
   }
 })();

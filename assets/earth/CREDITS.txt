@@ -1,0 +1,2 @@
+Earth textures: NASA Blue Marble and Black Marble imagery (public domain),
+as prepared in the three-globe examples (MIT, Vasco Asturiano). Clouds texture via turban/webgl-earth.

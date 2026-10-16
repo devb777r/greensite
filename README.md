@@ -8,6 +8,9 @@ Static site, with no build step and no server. It opens straight onto a 3D map o
 index.html                 the map app
 assets/style.css           styles
 assets/app.js              camera choreography, governorate list, Baghdad tools
+assets/scene3d.js          the realistic Earth intro and the 3D cell cube (Three.js)
+assets/earth/              Earth textures: NASA Blue Marble and Black Marble (public domain)
+assets/vendor/three/       Three.js r170 (MIT), bundled locally
 assets/vendor/maplibre/    MapLibre GL JS 5.22 (BSD-3), bundled locally
 assets/vendor/fonts/       Readex Pro and IBM Plex Sans Arabic (SIL OFL), bundled locally
 data/cells.json            6,011 cells from the final notebook (GreenSite_AI_Baghdad_Greening_MVP_clean)
