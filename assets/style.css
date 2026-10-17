@@ -300,8 +300,10 @@ input[type=range]{width:100%;accent-color:var(--sprout);height:22px;margin:0}
   .d-stage{position:relative;inset:auto;height:auto;flex:none;padding:6px 0}
   .cube-wrap{width:min(100%,380px)}
   .d-hint{bottom:0}
-  .g-card{position:relative;inset:auto;margin:0;width:auto;max-height:none}
-  .d-prio,.d-green,.d-soil{right:auto;left:auto;top:auto;bottom:auto;margin-top:0;width:auto}
+  .g-card{position:relative;inset:auto;margin:0;width:auto;max-height:none;flex:none}
+  .d-prio,.d-green,.d-soil{right:auto;left:auto;top:auto;bottom:auto;margin-top:0;width:auto;max-height:none;overflow:visible}
+  .detail{padding-bottom:calc(48px + env(safe-area-inset-bottom))}
+  .chips{grid-template-columns:repeat(3,minmax(0,1fr))}
   .d-close{position:fixed}
 }
 @media (prefers-reduced-motion:reduce){
