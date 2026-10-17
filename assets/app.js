@@ -63,7 +63,7 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
   }
   function panelPad() {
-    if (MOBILE()) return { top: 60, bottom: Math.round(window.innerHeight * 0.44), left: 12, right: 12 };
+    if (MOBILE()) return { top: 60, bottom: Math.round(window.innerHeight * 0.5), left: 12, right: 12 };
     return { top: 40, bottom: 40, left: 40, right: 400 };
   }
 
@@ -105,14 +105,20 @@
 
     map.on('movestart', function () { document.body.classList.add('is-moving'); });
     map.on('moveend', function () { document.body.classList.remove('is-moving'); });
-    map.on('load', function () {
+    var booted = false;
+    var onReady = function () {
+      if (booted) return; booted = true;
       addLayers(outline);
       buildList();
       buildLabels();
       bindUI();
       map.jumpTo(Object.assign({}, iraqCamera(), { pitch: 0 }));
       gs3Ready.then(startIntro);
-    });
+    };
+    // start as soon as the style is ready; don't wait for every satellite tile (slow networks)
+    map.once('style.load', onReady);
+    map.once('load', onReady);
+    setTimeout(function () { if (!booted && map.isStyleLoaded()) onReady(); }, 4000);
   }
 
   function prepCells(d) {
@@ -422,12 +428,18 @@
     enterIraq(false);
   }
 
+  function setSheet(state) {
+    var p = $('panel');
+    p.classList.toggle('min', state === 'min');
+    p.classList.toggle('full', state === 'full');
+  }
+
   function swapView(which) {
     var a = $('view-iraq'), b = $('view-city');
     var show = which === 'city' ? b : a, hide = which === 'city' ? a : b;
     hide.hidden = true; show.hidden = false;
     show.classList.remove('enter'); void show.offsetWidth; show.classList.add('enter');
-    if (MOBILE()) $('panel').classList.remove('min');
+    if (MOBILE()) setSheet('half');
   }
 
   /* ---------- Baghdad tools ---------- */
@@ -703,7 +715,21 @@
       map.flyTo(Object.assign({}, cityCamera(), { duration: REDUCED ? 0 : 1800, essential: true }));
     });
 
-    $('grip').addEventListener('click', function () { $('panel').classList.toggle('min'); });
+    // mobile sheet: tap the handle to switch between medium and full, swipe it up or down to resize
+    var panel = $('panel'), grip = $('grip'), y0 = null, moved = false;
+    grip.addEventListener('click', function () {
+      if (moved) { moved = false; return; }
+      setSheet(panel.classList.contains('full') || panel.classList.contains('min') ? 'half' : 'full');
+    });
+    grip.addEventListener('touchstart', function (e) { y0 = e.touches[0].clientY; moved = false; }, { passive: true });
+    grip.addEventListener('touchend', function (e) {
+      if (y0 === null) return;
+      var dy = e.changedTouches[0].clientY - y0; y0 = null;
+      if (Math.abs(dy) < 24) return;
+      moved = true;
+      var full = panel.classList.contains('full'), min = panel.classList.contains('min');
+      if (dy < 0) setSheet(min ? 'half' : 'full'); else setSheet(full ? 'half' : 'min');
+    });
     $('d-close').addEventListener('click', closeDetail);
     $('detail').addEventListener('click', function (e) { if (e.target === this) closeDetail(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('detail').hidden) closeDetail(); });

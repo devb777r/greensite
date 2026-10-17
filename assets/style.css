@@ -98,6 +98,7 @@ svg{flex:none}
 .legend-h .field-l{margin:0}
 .link{all:unset;cursor:pointer;font-size:12.5px;color:var(--sprout)}
 .link:hover{text-decoration:underline}
+.link[hidden]{display:none}
 .legend{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;font-size:12.5px}
 .lg{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;min-height:36px;padding:6px 10px;border-radius:10px;cursor:pointer;
   background:rgba(0,0,0,.22);border:1px solid var(--hair);color:var(--body);transition:background .2s,border-color .2s,opacity .2s}
@@ -272,16 +273,22 @@ input[type=range]{width:100%;accent-color:var(--sprout);height:22px;margin:0}
 .gc-muted{font-size:12.5px;color:var(--muted);margin:4px 0}
 
 @media (max-width:820px){
-  :root{--sheet-h:min(44vh,420px)}
+  :root{--sheet-h:min(50vh,460px)}
   .gov-label:not(.live){display:none}
   .panel{top:auto;left:0;right:0;bottom:0;width:auto;height:var(--sheet-h);border-radius:22px 22px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom);transition:height .5s var(--ease),transform .9s var(--ease),opacity .9s var(--ease)}
   .panel.min{height:132px}
+  .panel.full{height:calc(100dvh - 64px)}
+  .view{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  .govs,#view-city .sites{flex:none;overflow:visible;min-height:0}
+  .grip{touch-action:none}
+  .lg{min-height:40px}
+  .seg button{padding:9px 4px}
   .is-intro .panel{transform:translateY(40px)}
   .grip{display:block;all:unset;cursor:pointer;align-self:center;padding:10px 40px 2px}
   .grip span{display:block;width:40px;height:4px;border-radius:4px;background:var(--hair-2)}
   .brand{padding:8px 20px 8px}
   .brand-mark{width:30px;height:30px}
-  .view{padding:4px 20px 0}
+  .view{padding:4px 18px 0}
   .panel-foot{display:none}
   .city-title{font-size:26px}
   .hud{top:12px;left:12px}
