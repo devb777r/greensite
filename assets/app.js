@@ -26,9 +26,9 @@
       def: 'فرز أولي بس: افحص استخدام الأرض ووصول المي بالموقع.' }
   };
   var COL = {
-    priority: ['#1E8C3A', '#D97416', '#A3241C', '#596152'],
-    cluster: ['#B5541C', '#5A42B5', '#1C7A4E', '#596152'],
-    soil: ['#1E8C3A', '#B88C14', '#A3461A', '#596152']
+    priority: ['#1E8C3A', '#D97416', '#A3241C', '#121512'],
+    cluster: ['#B5541C', '#5A42B5', '#1C7A4E', '#121512'],
+    soil: ['#1E8C3A', '#B88C14', '#A3461A', '#121512']
   };
   var FIELD = { priority: 'p', cluster: 'cl', soil: 'pot' };
   var HEIGHT = {
@@ -169,7 +169,7 @@
     });
     map.addSource('cells', { type: 'geojson', data: { type: 'FeatureCollection', features: feats } });
     map.addLayer({ id: 'cells-ground', type: 'fill', source: 'cells', filter: ['==', ['get', 'p'], 3], layout: { visibility: 'none' },
-      paint: { 'fill-color': '#7E8778', 'fill-opacity': 0, 'fill-outline-color': 'rgba(0,0,0,0)' } });
+      paint: { 'fill-color': '#0B0D0B', 'fill-opacity': 0, 'fill-outline-color': 'rgba(0,0,0,0)' } });
     map.addLayer({ id: 'cells', type: 'fill-extrusion', source: 'cells', filter: ['!=', ['get', 'p'], 3], layout: { visibility: 'none' },
       paint: { 'fill-extrusion-color': colorExpr(), 'fill-extrusion-height': heightExpr(), 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0, 'fill-extrusion-vertical-gradient': true } });
     map.addLayer({ id: 'cells-cap', type: 'fill-extrusion', source: 'cells', filter: capFilter(), layout: { visibility: 'none' },
@@ -379,7 +379,7 @@
       $('toggle-3d').hidden = false; $('reset-view').hidden = false;
       fade('cells', 'fill-extrusion-opacity', 0.97, 900);
       fade('cells-cap', 'fill-extrusion-opacity', 0.95, 1400);
-      fade('cells-ground', 'fill-opacity', 0.42, 900);
+      fade('cells-ground', 'fill-opacity', 0.82, 900);
       fade('live-line', 'line-opacity', 0.7, 900);
       fade('live-glow', 'line-opacity', 0.35, 1200);
       fade('mask', 'fill-opacity', 0.62, 900);
