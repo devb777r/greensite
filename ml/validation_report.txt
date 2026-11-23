@@ -1,0 +1,34 @@
+Rows: 246451   Columns: 20
+Unique locations: 6011   Unique dates: 41
+Latitude  min/max: 32.83749999706094 / 33.77083333031074
+Longitude min/max: 43.84913805491145 / 44.96543838341897
+Date range: 2023-01-01 -> 2026-05-01
+Months skipped (no source image yet): []
+                           missing  pct_missing
+cell_id                          0         0.00
+latitude                         0         0.00
+longitude                        0         0.00
+date                             0         0.00
+ndvi_raw                         0         0.00
+ndvi_summary_qa                  0         0.00
+temperature_2m_K                 0         0.00
+dewpoint_2m_K                    0         0.00
+humidity_rh2m_pct                0         0.00
+total_precipitation_m            0         0.00
+soil_moisture_vwc_layer1         0         0.00
+total_evaporation_m              0         0.00
+potential_evaporation_m          0         0.00
+soil_ph_x10                  29725        12.06
+soil_organic_carbon_dg_kg    29602        12.01
+sand_g_kg                    29725        12.06
+clay_g_kg                    29725        12.06
+land_cover_code                  0         0.00
+power_lat                        0         0.00
+power_lon                        0         0.00
+Observations per source (non-null values):
+  MODIS MOD13A3 NDVI : 246451
+  ERA5-Land          : 246451
+  NASA POWER RH2M    : 246451  (of which flagged -999 by POWER: 0)
+  SoilGrids          : 216726
+  ESA WorldCover     : 246451
+Observations after raw join: 246451 rows

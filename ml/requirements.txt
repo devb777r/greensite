@@ -1,0 +1,14 @@
+# Python packages used by the two B.GreenSite notebooks.
+# Google Colab already has all of them installed, so this file is mainly a record of the dependencies.
+# A full run of both notebooks was tested with the versions shown in the comments.
+# The website's JavaScript libraries (MapLibre GL JS, Three.js) and fonts are not Python packages:
+# the website notebook downloads them from the npm registry when it builds the site.
+
+pandas          # tested 3.0.5
+numpy           # tested 2.5.3
+matplotlib      # tested 3.11.2
+scikit-learn    # tested 1.9.1  (KMeans, StandardScaler, silhouette_score)
+bokeh>=3.0      # tested 3.10.1 (the map uses the Bokeh 3 CDSView / GroupFilter API)
+shapely         # tested 2.2.0  (governorate borders in the website notebook)
+pillow          # tested 12.3.0 (Earth textures in the website notebook)
+ipython         # %run and %%writefile in the website notebook
